@@ -16,6 +16,34 @@ const FONT_PATH = 'C:\\Windows\\Fonts\\malgun.ttf';
 const OUTPUT_DIR = path.join(__dirname, 'output');
 const CSV_PATH = path.join(OUTPUT_DIR, '접수현황.csv');
 
+// 시부인표 전체 데이터 목록 조회 API
+app.get('/api/list', (req, res) => {
+  try {
+    if (!fs.existsSync(EXCEL_PATH)) {
+      return res.status(500).json({ success: false, message: '시부인표 엑셀 파일을 찾을 수 없습니다.' });
+    }
+
+    const workbook = XLSX.readFile(EXCEL_PATH);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+    const dbData = [];
+    // 2번째 행부터 탐색 (1행은 헤더)
+    for (let i = 1; i < data.length; i++) {
+      const rowClaimNo = String(data[i][1] || '').trim(); // B열: 접수번호
+      const rowNameVal = String(data[i][2] || '').trim(); // C열: 채권자명
+      if (rowNameVal && rowClaimNo) {
+        dbData.push({ claimNo: rowClaimNo, name: rowNameVal });
+      }
+    }
+
+    return res.json({ success: true, list: dbData });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.toString() });
+  }
+});
+
 // 1. 성함으로 시부인표 데이터 조회 API
 app.get('/api/search', (req, res) => {
   try {
