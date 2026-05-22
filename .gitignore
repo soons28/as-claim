@@ -1,0 +1,13 @@
+# 개인정보 포함 파일 - git 제외
+data/
+output/
+
+# Node 모듈
+node_modules/
+
+# 임시 파일
+*.tmp
+~$*
+
+# 로컬 환경
+.env
