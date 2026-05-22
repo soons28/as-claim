@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>채권신고 취하서 자동 타이핑 시스템</title>
+  <!-- 라이브러리 CDN 호출 -->
+  <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+  <script src="https://unpkg.com/@pdf-lib/fontkit/dist/fontkit.umd.js"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --panel-bg: #ffffff;
+      --text: #0f172a;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+      --success: #10b981;
+      --error: #ef4444;
+      --badge-bg-red: #fee2e2;
+      --badge-text-red: #ef4444;
+      --badge-bg-green: #dcfce7;
+      --badge-text-green: #15803d;
+      --badge-bg-blue: #dbeafe;
+      --badge-text-blue: #1d4ed8;
+    }
+
+    body {
+      font-family: 'Outfit', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* 좌측 입력 패널 */
+    .left-panel {
+      width: 440px;
+      background-color: var(--panel-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      box-shadow: 4px 0 20px rgba(15, 23, 42, 0.03);
+      z-index: 10;
+    }
+
+    .panel-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--border);
+      background-color: #fcfdfe;
+    }
+
+    .panel-header h1 {
+      margin: 0;
+      font-size: 20px;
+      color: var(--text);
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    
+    .panel-header p {
+      margin: 6px 0 0 0;
+      font-size: 13px;
+      color: var(--text-light);
+      line-height: 1.4;
+    }
+
+    .panel-content {
+      padding: 24px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .section-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 20px;
+      transition: all 0.2s ease;
+    }
+
+    .section-box:hover {
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.02);
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      color: #1e293b;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #475569;
+    }
+
+    input[type="text"], input[type="tel"], select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13.5px;
+      box-sizing: border-box;
+      background-color: #ffffff;
+      transition: all 0.2s;
+      color: var(--text);
+    }
+
+    input[type="text"]:focus, input[type="tel"]:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    input:disabled, select:disabled {
+      background-color: #f1f5f9;
+      color: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 11px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: white;
+      box-shadow: 0 2px 4px rgba(16, 185, 129, 0.1);
+    }
+
+    .btn-success:hover {
+      background: #059669;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    }
+
+    .btn-secondary {
+      background: #64748b;
+      color: white;
+      margin-top: 8px;
+    }
+
+    .btn-secondary:hover {
+      background: #475569;
+    }
+
+    .btn:disabled {
+      background: #e2e8f0;
+      color: #94a3b8;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .status-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+    }
+    .status-badge.red { background: var(--badge-bg-red); color: var(--badge-text-red); }
+    .status-badge.green { background: var(--badge-bg-green); color: var(--badge-text-green); }
+    .status-badge.blue { background: var(--badge-bg-blue); color: var(--badge-text-blue); }
+
+    .message {
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      margin-top: 10px;
+      display: none;
+      line-height: 1.5;
+    }
+    .message.error { background: #fee2e2; color: var(--error); display: block; border: 1px solid #fecaca; }
+    .message.success { background: #ecfdf5; color: #065f46; display: block; border: 1px solid #a7f3d0; }
+
+
+
+    /* 우측 PDF 미리보기 영역 */
+    .preview-panel {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background-color: #334155;
+    }
+
+    .preview-header {
+      background-color: #0f172a;
+      padding: 16px 24px;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+      z-index: 10;
+    }
+
+    .preview-header h2 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .preview-body {
+      flex: 1;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0; /* 내부 여백을 없애서 PDF를 극대화 */
+      background: #334155;
+      overflow: hidden;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background-color: #ffffff;
+      transition: all 0.3s;
+    }
+
+    .loading-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.85);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 14px;
+      z-index: 20;
+      gap: 12px;
+      backdrop-filter: blur(4px);
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-radius: 50%;
+      border-top-color: var(--primary);
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* 좌표 조정 스타일 */
+    .btn-coord {
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      border: 1px solid var(--border);
+      background: #f1f5f9;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .btn-coord:hover {
+      background: #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 좌측 컨트롤 패널 -->
+  <div class="left-panel">
+    <div class="panel-header">
+      <h1>채권신고 취하서 타이핑</h1>
+      <p id="appDesc">시스템 초기화 중...</p>
+    </div>
+
+    <div class="panel-content">
+      <!-- 1단계: 시부인표 데이터 연동 -->
+      <div class="section-box">
+        <div class="section-title">
+          1단계. 시부인표 데이터 연동
+          <span id="dbStatus" class="status-badge red">확인 중</span>
+        </div>
+        <div id="excelInfo" style="font-size: 12.5px; color: var(--success); display: none; font-weight: bold;">
+          ✅ 데이터 연동 완료! (총 <span id="dbCount">0</span>명)
+        </div>
+        <div id="excelUploadGroup" style="display: none;">
+          <label for="excelFile" style="font-size:12px;">시부인표 엑셀 파일 (.xlsx)</label>
+          <input type="file" id="excelFile" accept=".xlsx" onchange="loadExcel(this)">
+          <div style="font-size: 11px; color: var(--text-light); margin-top: 6px; line-height: 1.4;">
+            * '파산채권 시부인표 데이터.xlsx' 파일을 수동으로 연동할 수도 있습니다.
+          </div>
+        </div>
+      </div>
+
+      <!-- 2단계: 성함 조회 -->
+      <div class="section-box" id="searchSection" style="opacity: 0.5; pointer-events: none;">
+        <div class="section-title">2단계. 채권자 검색</div>
+        <div class="form-group">
+          <label for="nameInput">채권자 성함 (또는 법인명)</label>
+          <input type="text" id="nameInput" placeholder="이름 입력 후 엔터 또는 검색 클릭" onkeydown="if(event.key==='Enter') lookupName()">
+        </div>
+        <button type="button" class="btn btn-primary" id="btnLookup" onclick="lookupName()">성함으로 채권번호 조회</button>
+        <div id="lookupMsg" class="message"></div>
+      </div>
+
+      <!-- 3단계: 상세 정보 입력 및 인쇄 -->
+      <div class="section-box" id="step2" style="display: none;">
+        <div class="section-title">3단계. 상세 정보 입력</div>
+        <div id="multiClaimMsg" style="display:none; color:#dc2626; font-size:12px; font-weight:bold; margin-bottom:10px; padding:8px 10px; background:#fee2e2; border-radius:6px; border:1px solid #fecaca;"></div>
+        
+        <div class="form-group">
+          <label for="claimSelect">확인된 채권번호 선택</label>
+          <select id="claimSelect" onchange="onClaimSelectChange()"></select>
+        </div>
+
+        <div class="form-group">
+          <label for="claimNoInput">채권번호 (수정/직접입력 가능)</label>
+          <input type="text" id="claimNoInput" oninput="queuePreview()" required>
+        </div>
+
+        <div class="form-group">
+          <label for="unitNo">구분 (동/호수)</label>
+          <input type="text" id="unitNo" placeholder="예: 101동 202호" oninput="queuePreview()" required>
+        </div>
+
+        <div class="form-group">
+          <label for="phone">연락처</label>
+          <input type="tel" id="phone" placeholder="예: 010-1234-5678" oninput="queuePreview()" required>
+        </div>
+
+        <div class="form-group" style="margin-top: 18px;">
+          <button type="button" class="btn btn-success" id="btnSubmit" onclick="submitAndPrint()">
+            🖨️ 즉시 인쇄
+          </button>
+        </div>
+        <div id="submitMsg" class="message"></div>
+      </div>
+
+      <!-- 미세조정 패널 -->
+      <div class="section-box" style="margin-top: 16px;">
+        <details>
+          <summary style="font-size: 13px; font-weight: 700; cursor: pointer; color: #1e293b; user-select: none;">
+            🔧 출력 글자 위치 미세조정
+          </summary>
+          <div style="font-size: 11px; color: var(--text-light); margin: 8px 0; line-height: 1.4;">
+            * 각 항목의 글자 출력 위치(가로 X, 세로 Y)를 조정할 수 있습니다. (값이 커질수록 오른쪽/위로 이동합니다.)
+          </div>
+          <table style="width: 100%; font-size: 12px; border-collapse: collapse; border-top: 1px solid var(--border);">
+            <thead>
+              <tr style="background: #f8fafc; border-bottom: 1px solid var(--border);">
+                <th style="text-align: left; padding: 6px;">항목</th>
+                <th style="padding: 6px; width: 90px; text-align: center;">가로 위치(X)</th>
+                <th style="padding: 6px; width: 90px; text-align: center;">세로 위치(Y)</th>
+              </tr>
+            </thead>
+            <tbody id="coordsTableBody">
+              <!-- JS에서 동적 생성됨 -->
+            </tbody>
+          </table>
+          <div style="margin-top: 12px;">
+            <button type="button" class="btn btn-secondary" style="margin:0; padding:6px; font-size:11px;" onclick="resetCoords()">기본값으로 초기화</button>
+          </div>
+        </details>
+      </div>
+
+
+
+    </div>
+  </div>
+
+  <!-- 우측 미리보기 영역 -->
+  <div class="preview-panel">
+    <div class="preview-header">
+      <h2>실시간 PDF 타이핑 미리보기</h2>
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <div class="zoom-controls" style="display: flex; align-items: center; gap: 6px;">
+          <button type="button" class="btn-zoom" onclick="zoomOut()" style="background: #334155; color: white; border: 1px solid #475569; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; transition: background 0.2s;" onmouseover="this.style.background='#475569'" onmouseout="this.style.background='#334155'">➖ 축소</button>
+          <span id="zoomLabel" style="font-size: 12px; font-weight: bold; color: #e2e8f0; min-width: 55px; text-align: center; user-select: none;">화면맞춤</span>
+          <button type="button" class="btn-zoom" onclick="zoomIn()" style="background: #334155; color: white; border: 1px solid #475569; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; transition: background 0.2s;" onmouseover="this.style.background='#475569'" onmouseout="this.style.background='#334155'">➕ 확대</button>
+          <button type="button" class="btn-zoom" onclick="zoomReset()" style="background: #334155; color: white; border: 1px solid #475569; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; transition: background 0.2s; margin-left: 4px;" onmouseover="this.style.background='#475569'" onmouseout="this.style.background='#334155'">🔄 화면맞춤</button>
+        </div>
+        <div style="font-size: 12px; color: #94a3b8;">* 변경 사항이 실시간으로 PDF 양식 위에 작성됩니다.</div>
+      </div>
+    </div>
+    <div class="preview-body">
+      <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loadingMsg">시스템 리소스 초기화 중...</div>
+      </div>
+      <iframe id="pdfPreview"></iframe>
+    </div>
+  </div>
+
+  <script>
+    // 빌드 시점에 치환될 플레이스홀더 변수
+    const EMBEDDED_PDF_BASE64 = "/* EMBEDDED_PDF_BASE64_PLACEHOLDER */";
+    const EMBEDDED_DB = /* EMBEDDED_DB_PLACEHOLDER */;
+
+    // 모드 판별: EMBEDDED_PDF_BASE64가 기본 텍스트가 아니면 단독 빌드 모드
+    const IS_EMBEDDED_MODE = (EMBEDDED_PDF_BASE64 && EMBEDDED_PDF_BASE64.indexOf('PLACEHOLDER') === -1);
+
+    let templateBytes = null;
+    let fontBytes = null;
+    let currentPdfBytes = null;
+    let previewDebounce = null;
+    let creditorsDatabase = [];
+    let currentZoom = 'page-fit'; // 'page-fit' 또는 퍼센트 숫자 (예: 100, 110 등)
+
+    function zoomIn() {
+      if (currentZoom === 'page-fit') {
+        currentZoom = 100;
+      } else {
+        currentZoom = Math.min(200, currentZoom + 10);
+      }
+      updateZoomUI();
+      updatePreview();
+    }
+
+    function zoomOut() {
+      if (currentZoom === 'page-fit') {
+        currentZoom = 90;
+      } else {
+        currentZoom = Math.max(50, currentZoom - 10);
+      }
+      updateZoomUI();
+      updatePreview();
+    }
+
+    function zoomReset() {
+      currentZoom = 'page-fit';
+      updateZoomUI();
+      updatePreview();
+    }
+
+    function updateZoomUI() {
+      const label = document.getElementById('zoomLabel');
+      if (label) {
+        label.innerText = currentZoom === 'page-fit' ? '화면맞춤' : currentZoom + '%';
+      }
+    }
+
+    // 기본 좌표 및 조정 설정
+    const DEFAULT_COORDS = {
+      nameX: 376, nameY: 552,
+      unitX: 376, unitY: 505,
+      claimX: 376, claimY: 458,
+      phoneX: 376, phoneY: 411,
+      monthX: 300, monthY: 248,
+      dayX: 340, dayY: 248,
+      sigX: 297, sigY: 213
+    };
+
+    let coords = { ...DEFAULT_COORDS };
+    const APP_VERSION = '2.0';
+
+    function checkAppVersion() {
+      const savedVersion = localStorage.getItem('app_version');
+      if (savedVersion !== APP_VERSION) {
+        localStorage.setItem('draw_coords', JSON.stringify(DEFAULT_COORDS));
+        localStorage.setItem('app_version', APP_VERSION);
+      }
+    }
+
+    // 초기 로딩
+    window.onload = async function() {
+      const loader = document.getElementById('loadingOverlay');
+      const loadMsg = document.getElementById('loadingMsg');
+      const desc = document.getElementById('appDesc');
+      
+      try {
+        if (IS_EMBEDDED_MODE) {
+          desc.innerText = '더블클릭만으로 실행되는 오프라인 단독형 프로그램입니다.';
+          loadMsg.innerText = '내장 리소스 초기화 중...';
+          
+          // 1. 내장 PDF 템플릿 디코딩
+          const binaryString = atob(EMBEDDED_PDF_BASE64);
+          const len = binaryString.length;
+          templateBytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            templateBytes[i] = binaryString.charCodeAt(i);
+          }
+
+          // 2. 구글 나눔고딕 한글 폰트 로드
+          loadMsg.innerText = '한글 폰트(나눔고딕) 파일 로드 중...';
+          const fontRes = await fetch('https://raw.githubusercontent.com/google/fonts/main/ofl/nanumgothic/NanumGothic-Regular.ttf');
+          if (!fontRes.ok) throw new Error('폰트 파일 다운로드 실패');
+          fontBytes = await fontRes.arrayBuffer();
+
+          // 3. 내장 엑셀 DB 로드
+          if (EMBEDDED_DB && EMBEDDED_DB.length > 0) {
+            creditorsDatabase = EMBEDDED_DB;
+            showExcelStatus(EMBEDDED_DB.length);
+          } else {
+            loadSavedExcelData();
+          }
+
+
+        } else {
+          desc.innerText = '시부인표 정보로 PDF를 즉시 생성 및 출력합니다. (로컬 서버 버전)';
+          loadMsg.innerText = '서버로부터 PDF 양식 로드 중...';
+
+          // 1. API로부터 원본 PDF 로드
+          const tempRes = await fetch('/api/template');
+          if (!tempRes.ok) throw new Error('PDF 템플릿 로드 실패');
+          templateBytes = await tempRes.arrayBuffer();
+
+          // 2. API로부터 맑은고딕 폰트 로드
+          loadMsg.innerText = '맑은 고딕 한글 폰트 로드 중...';
+          const fontRes = await fetch('/api/font');
+          if (!fontRes.ok) throw new Error('한글 폰트 로드 실패');
+          fontBytes = await fontRes.arrayBuffer();
+
+          // 3. 서버 연동 상태 표시
+          showServerStatus();
+        }
+
+        // 공통 좌표 복구 및 미리보기 갱신
+        checkAppVersion();
+        loadSavedCoords();
+        buildCoordsTable();
+        
+        loader.style.display = 'none';
+        updatePreview();
+      } catch (err) {
+        loader.innerHTML = '<div style="color:#f87171; font-weight:bold; text-align:center; padding: 20px;">' +
+                           '⚠️ 초기화 오류가 발생했습니다.<br>' +
+                           '<span style="font-size:12px; font-weight:normal; color:#94a3b8;">' + err.message + '</span><br>' +
+                           '<button onclick="location.reload()" style="margin-top:12px; padding:6px 12px; font-size:12px; background:var(--primary); color:white; border:none; border-radius:4px; cursor:pointer;">재시도</button>' +
+                           '</div>';
+        console.error(err);
+      }
+    };
+
+    // 서버 모드 상태 노출
+    function showServerStatus() {
+      const statusBadge = document.getElementById('dbStatus');
+      statusBadge.className = 'status-badge green';
+      statusBadge.innerText = '서버 연동';
+      document.getElementById('excelInfo').style.display = 'none';
+      document.getElementById('excelUploadGroup').style.display = 'none';
+      
+      // 검색창 활성화
+      document.getElementById('searchSection').style.opacity = '1';
+      document.getElementById('searchSection').style.pointerEvents = 'auto';
+    }
+
+    // 로컬 브라우저 엑셀 데이터 로드
+    function loadSavedExcelData() {
+      const saved = localStorage.getItem('creditor_db_saved');
+      if (saved) {
+        try {
+          creditorsDatabase = JSON.parse(saved);
+          showExcelStatus(creditorsDatabase.length);
+        } catch (e) {}
+      } else {
+        document.getElementById('dbStatus').className = 'status-badge red';
+        document.getElementById('dbStatus').innerText = '엑셀 대기';
+        document.getElementById('excelUploadGroup').style.display = 'block';
+        document.getElementById('excelInfo').style.display = 'none';
+      }
+    }
+
+    // 엑셀 수동 업로드 (단독형에 엑셀 미지정 상태일 때)
+    function loadExcel(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+          creditorsDatabase = [];
+          for (let i = 1; i < rows.length; i++) {
+            const rowClaimNo = String(rows[i][1] || '').trim();
+            const rowNameVal = String(rows[i][2] || '').trim();
+            if (rowNameVal && rowClaimNo) {
+              creditorsDatabase.push({ claimNo: rowClaimNo, name: rowNameVal });
+            }
+          }
+
+          if (creditorsDatabase.length > 0) {
+            localStorage.setItem('creditor_db_saved', JSON.stringify(creditorsDatabase));
+            showExcelStatus(creditorsDatabase.length);
+          } else {
+            alert('엑셀 파일에서 유효한 채권자 데이터를 찾지 못했습니다.');
+          }
+        } catch (err) {
+          alert('엑셀 파싱 실패: ' + err.toString());
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function showExcelStatus(count) {
+      document.getElementById('dbStatus').className = 'status-badge green';
+      document.getElementById('dbStatus').innerText = '연동 완료';
+      document.getElementById('excelUploadGroup').style.display = 'none';
+      document.getElementById('dbCount').innerText = count;
+      document.getElementById('excelInfo').style.display = 'block';
+      
+      // 검색창 활성화
+      document.getElementById('searchSection').style.opacity = '1';
+      document.getElementById('searchSection').style.pointerEvents = 'auto';
+    }
+
+
+
+    // 이름 검색 및 분기
+    async function lookupName() {
+      const name = document.getElementById('nameInput').value.trim();
+      const msg = document.getElementById('lookupMsg');
+      const btn = document.getElementById('btnLookup');
+
+      if (!name) {
+        alert('조회할 이름을 입력해 주세요.');
+        return;
+      }
+
+      const searchName = name.replace(/\s+/g, '');
+      if (searchName.length < 2) {
+        alert('이름을 2글자 이상 입력해 주세요.');
+        return;
+      }
+
+      msg.style.display = 'none';
+      btn.disabled = true;
+
+      if (IS_EMBEDDED_MODE) {
+        btn.disabled = false;
+        const matches = [];
+        creditorsDatabase.forEach(item => {
+          const rowNameNorm = item.name.replace(/\s+/g, '');
+          let isMatch = (rowNameNorm === searchName);
+          if (!isMatch && rowNameNorm.includes(searchName)) {
+            isMatch = true;
+          }
+          if (!isMatch && item.name.includes(',')) {
+            const parts = item.name.split(',');
+            for (let p of parts) {
+              const cleanPart = p.replace(/\s+/g, '').trim();
+              if (cleanPart === searchName || cleanPart.includes(searchName)) {
+                isMatch = true;
+                break;
+              }
+            }
+          }
+          if (isMatch) matches.push(item);
+        });
+
+        if (matches.length > 0) {
+          handleSearchResults(matches);
+        } else {
+          msg.innerHTML = '일치하는 채권자를 찾을 수 없습니다.<br><small style="color:gray;">엑셀에 기재된 정확한 이름으로 검색해 주세요.</small>';
+          msg.className = 'message error';
+        }
+      } else {
+        try {
+          const res = await fetch(`/api/search?name=${encodeURIComponent(name)}`);
+          const result = await res.json();
+          btn.disabled = false;
+
+          if (result.success) {
+            handleSearchResults(result.matches);
+          } else {
+            msg.innerText = result.message;
+            msg.className = 'message error';
+          }
+        } catch (err) {
+          btn.disabled = false;
+          msg.innerText = '서버 통신 실패';
+          msg.className = 'message error';
+        }
+      }
+    }
+
+    // 검색 결과 처리
+    function handleSearchResults(matches) {
+      const select = document.getElementById('claimSelect');
+      select.innerHTML = '';
+
+      const multiMsg = document.getElementById('multiClaimMsg');
+      if (matches.length > 1) {
+        multiMsg.textContent = '⚠️ 총 ' + matches.length + '건의 채권번호가 검색되었습니다. 아래에서 선택하세요.';
+        multiMsg.style.display = 'block';
+      } else {
+        multiMsg.style.display = 'none';
+      }
+
+      if (matches.length > 1) {
+        const allClaimNos = matches.map(m => m.claimNo).join(', ');
+        const opt = document.createElement('option');
+        opt.value = allClaimNos;
+        opt.setAttribute('data-name', matches[0].name);
+        opt.text = '★ 모든 채권번호 합치기 (' + allClaimNos + ')';
+        select.appendChild(opt);
+      }
+
+      matches.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.claimNo;
+        opt.setAttribute('data-name', m.name);
+        opt.text = m.claimNo + ' [' + m.name + ']';
+        select.appendChild(opt);
+      });
+
+      document.getElementById('step2').style.display = 'block';
+      
+      const input = document.getElementById('claimNoInput');
+      if (input && select.options.length > 0) {
+        input.value = select.options[0].value;
+      }
+
+      document.getElementById('unitNo').value = '';
+      document.getElementById('phone').value = '';
+
+      updatePreview();
+    }
+
+    function queuePreview() {
+      clearTimeout(previewDebounce);
+      previewDebounce = setTimeout(updatePreview, 300);
+    }
+
+    function onClaimSelectChange() {
+      const select = document.getElementById('claimSelect');
+      const input = document.getElementById('claimNoInput');
+      if (select && input) {
+        input.value = select.value;
+      }
+      queuePreview();
+    }
+
+    // PDF 렌더링 및 미리보기 갱신
+    async function updatePreview() {
+      if (!templateBytes || !fontBytes) return;
+
+      try {
+        const name = document.getElementById('nameInput').value.trim();
+        const claimSelect = document.getElementById('claimSelect');
+        const claimNoInput = document.getElementById('claimNoInput');
+        const claimNo = claimNoInput ? claimNoInput.value.trim() : '';
+        const selectedOpt = claimSelect && claimSelect.options[claimSelect.selectedIndex];
+        const officialName = selectedOpt ? selectedOpt.getAttribute('data-name') : name;
+        const unitNo = document.getElementById('unitNo').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+
+        const pdfDoc = await PDFLib.PDFDocument.load(templateBytes);
+        pdfDoc.registerFontkit(window.fontkit);
+        const customFont = await pdfDoc.embedFont(fontBytes);
+        const firstPage = pdfDoc.getPages()[0];
+
+        const draw = (text, x, y, size = 12, center = false, maxAvailableWidth = null) => {
+          if (!text) return;
+          let currentSize = size;
+          if (maxAvailableWidth) {
+            const textWidth = customFont.widthOfTextAtSize(text, currentSize);
+            if (textWidth > maxAvailableWidth) {
+              currentSize = Math.max(8, currentSize * (maxAvailableWidth / textWidth));
+            }
+          }
+          let drawX = x;
+          if (center) {
+            const textWidth = customFont.widthOfTextAtSize(text, currentSize);
+            drawX = x - (textWidth / 2);
+          }
+          firstPage.drawText(text, {
+            x: drawX, y: y, size: currentSize,
+            font: customFont,
+            color: PDFLib.rgb(0, 0, 0)
+          });
+        };
+
+        // PDF 오버레이 (최대 가로 너비 180pt 제한)
+        draw(officialName, coords.nameX, coords.nameY, 16, true, 180);
+        
+        const fullUnit = unitNo ? "안산유통상가 " + unitNo : '';
+        draw(fullUnit, coords.unitX, coords.unitY, 16, true, 180);
+        
+        draw(claimNo, coords.claimX, coords.claimY, 16, true, 180);
+        draw(phone, coords.phoneX, coords.phoneY, 16, true, 180);
+
+        const today = new Date();
+        draw(String(today.getMonth() + 1), coords.monthX, coords.monthY, 13, true);
+        draw(String(today.getDate()), coords.dayX, coords.dayY, 13, true);
+
+        // 서명자명 글자 크기 조절
+        let sigFontSize = 16;
+        if (officialName) {
+          const textWidth = customFont.widthOfTextAtSize(officialName, sigFontSize);
+          const maxSigWidth = 160;
+          if (textWidth > maxSigWidth) {
+            sigFontSize = Math.max(11, sigFontSize * (maxSigWidth / textWidth));
+          }
+        }
+        draw(officialName, coords.sigX, coords.sigY, sigFontSize, true);
+
+        currentPdfBytes = await pdfDoc.save();
+        const pdfBlob = new Blob([currentPdfBytes], { type: 'application/pdf' });
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        
+        // 줌 파라미터 동적 설정 (축소/확대 대응)
+        let zoomParam = 'zoom=page-fit';
+        if (currentZoom !== 'page-fit') {
+          zoomParam = `zoom=${currentZoom}`;
+        }
+        document.getElementById('pdfPreview').src = pdfUrl + `#toolbar=0&navpanes=0&scrollbar=0&view=Fit&${zoomParam}`;
+      } catch (err) {
+        console.error('PDF 미리보기 갱신 에러:', err);
+      }
+    }
+
+    // 최종 접수 및 인쇄 호출
+    async function submitAndPrint() {
+      const nameInputVal = document.getElementById('nameInput').value.trim();
+      const claimSelect = document.getElementById('claimSelect');
+      const selectedOpt = claimSelect && claimSelect.options[claimSelect.selectedIndex];
+      const officialName = selectedOpt ? selectedOpt.getAttribute('data-name') : nameInputVal;
+      const claimNoInput = document.getElementById('claimNoInput');
+      const claimNo = claimNoInput ? claimNoInput.value.trim() : '';
+      const unitNo = document.getElementById('unitNo').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const msg = document.getElementById('submitMsg');
+      const btn = document.getElementById('btnSubmit');
+
+
+
+      msg.style.display = 'none';
+      btn.disabled = true;
+
+      if (IS_EMBEDDED_MODE) {
+        btn.disabled = false;
+        
+
+
+        triggerPrint();
+
+        msg.innerHTML = '<strong>접수 및 인쇄 작업 기동 완료!</strong><br>인쇄 팝업이 활성화되었습니다.';
+        msg.className = 'message success';
+      } else {
+        const base64Pdf = btoa(
+          new Uint8Array(currentPdfBytes)
+            .reduce((data, byte) => data + String.fromCharCode(byte), '')
+        );
+
+        const submitData = {
+          name: officialName,
+          unitNo,
+          claimNo,
+          phone,
+          pdfBytes: base64Pdf
+        };
+
+        try {
+          const res = await fetch('/api/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(submitData)
+          });
+          const result = await res.json();
+          btn.disabled = false;
+
+          if (result.success) {
+            msg.innerHTML = '<strong>성공적으로 접수 및 저장되었습니다!</strong><br>잠시 후 인쇄 창이 열립니다.';
+            msg.className = 'message success';
+            triggerPrint();
+          } else {
+            msg.innerText = '저장 오류: ' + result.message;
+            msg.className = 'message error';
+          }
+        } catch (err) {
+          btn.disabled = false;
+          msg.innerText = '서버 전송 중 통신 실패';
+          msg.className = 'message error';
+        }
+      }
+    }
+
+    function triggerPrint() {
+      const pdfBlob = new Blob([currentPdfBytes], { type: 'application/pdf' });
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      const printWin = window.open(pdfUrl, '_blank');
+      if (printWin) {
+        printWin.onload = function() {
+          setTimeout(function() {
+            printWin.focus();
+            printWin.print();
+          }, 500);
+        };
+      }
+    }
+
+
+
+    // 좌표 조정 모드
+    const COORDS_META = {
+      nameX: '성명(X)', nameY: '성명(Y)',
+      unitX: '동호수(X)', unitY: '동호수(Y)',
+      claimX: '채권번호(X)', claimY: '채권번호(Y)',
+      phoneX: '연락처(X)', phoneY: '연락처(Y)',
+      monthX: '날짜 월(X)', monthY: '날짜 월(Y)',
+      dayX: '날짜 일(X)', dayY: '날짜 일(Y)',
+      sigX: '서명란명(X)', sigY: '서명란명(Y)'
+    };
+
+    function loadSavedCoords() {
+      const saved = localStorage.getItem('draw_coords');
+      if (saved) {
+        try {
+          coords = { ...DEFAULT_COORDS, ...JSON.parse(saved) };
+        } catch (e) {
+          coords = { ...DEFAULT_COORDS };
+        }
+      } else {
+        coords = { ...DEFAULT_COORDS };
+      }
+    }
+
+    function buildCoordsTable() {
+      const tbody = document.getElementById('coordsTableBody');
+      tbody.innerHTML = '';
+
+      // 항목별로 한 행에 X와 Y를 묶어 렌더링
+      const items = [
+        { label: '성명', xKey: 'nameX', yKey: 'nameY' },
+        { label: '동호수', xKey: 'unitX', yKey: 'unitY' },
+        { label: '채권번호', xKey: 'claimX', yKey: 'claimY' },
+        { label: '연락처', xKey: 'phoneX', yKey: 'phoneY' },
+        { label: '날짜(월)', xKey: 'monthX', yKey: 'monthY' },
+        { label: '날짜(일)', xKey: 'dayX', yKey: 'dayY' },
+        { label: '서명란 이름', xKey: 'sigX', yKey: 'sigY' }
+      ];
+
+      items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px dashed #e2e8f0';
+        tr.innerHTML = 
+          '<td style="padding: 6px; font-weight: 600; color: #475569;">' + item.label + '</td>' +
+          '<td style="padding: 6px; text-align: center;">' +
+            '<div style="display:flex; align-items:center; justify-content:center; gap:2px;">' +
+              '<button type="button" class="btn-coord" onclick="adjustCoord(\'' + item.xKey + '\', -2)">-</button>' +
+              '<input type="number" id="coord_' + item.xKey + '" style="width:36px; text-align:center; font-size:11px; padding:2px;" onchange="saveCoords()">' +
+              '<button type="button" class="btn-coord" onclick="adjustCoord(\'' + item.xKey + '\', 2)">+</button>' +
+            '</div>' +
+          '</td>' +
+          '<td style="padding: 6px; text-align: center;">' +
+            '<div style="display:flex; align-items:center; justify-content:center; gap:2px;">' +
+              '<button type="button" class="btn-coord" onclick="adjustCoord(\'' + item.yKey + '\', -2)">-</button>' +
+              '<input type="number" id="coord_' + item.yKey + '" style="width:36px; text-align:center; font-size:11px; padding:2px;" onchange="saveCoords()">' +
+              '<button type="button" class="btn-coord" onclick="adjustCoord(\'' + item.yKey + '\', 2)">+</button>' +
+            '</div>' +
+          '</td>';
+        tbody.appendChild(tr);
+
+        // 입력창 값 동기화
+        setTimeout(() => {
+          document.getElementById('coord_' + item.xKey).value = coords[item.xKey];
+          document.getElementById('coord_' + item.yKey).value = coords[item.yKey];
+        }, 0);
+      });
+    }
+
+    function adjustCoord(key, amount) {
+      if (coords[key] !== undefined) {
+        coords[key] = parseInt(coords[key]) + amount;
+        const input = document.getElementById('coord_' + key);
+        if (input) {
+          input.value = coords[key];
+        }
+        saveCoords();
+      }
+    }
+
+    function saveCoords() {
+      for (const key in coords) {
+        const input = document.getElementById('coord_' + key);
+        if (input) {
+          coords[key] = parseInt(input.value) || DEFAULT_COORDS[key];
+        }
+      }
+      localStorage.setItem('draw_coords', JSON.stringify(coords));
+      queuePreview();
+    }
+
+    function resetCoords() {
+      coords = { ...DEFAULT_COORDS };
+      for (const key in coords) {
+        const input = document.getElementById('coord_' + key);
+        if (input) input.value = coords[key];
+      }
+      localStorage.setItem('draw_coords', JSON.stringify(coords));
+      queuePreview();
+    }
+  </script>
+</body>
+</html>
