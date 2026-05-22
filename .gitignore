@@ -1,5 +1,4 @@
 # 개인정보 포함 파일 - git 제외
-data/
 output/
 
 # Node 모듈
